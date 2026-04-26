@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibex | Ghost your files</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000;
+            --card-bg: rgba(20, 20, 20, 0.85);
+            --accent-primary: #818cf8;
+            --accent-secondary: #a78bfa;
+            --accent-glow: #c084fc;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --error: #ef4444;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --input-bg: rgba(255, 255, 255, 0.04);
+            --input-border: rgba(255, 255, 255, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000;
+            color: #fff;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            perspective: 800px;
+        }
+
+        /* Interactive particle canvas */
+        #particleCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 700px; height: 700px;
+            background: radial-gradient(circle, rgba(129,140,248,0.12) 0%, rgba(167,139,250,0.06) 35%, transparent 70%);
+            pointer-events: none; z-index: 0;
+        }
+
+        .bg-3d-text {
+            position: fixed; top: 50%; left: 50%;
+            font-size: clamp(80px, 18vw, 300px);
+            font-weight: 800; color: #fff;
+            opacity: 0.04; pointer-events: none; z-index: 0;
+            user-select: none; white-space: nowrap;
+            will-change: transform; letter-spacing: 0.1em;
+            transform-origin: center;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 18px 36px;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(22px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: #fff; text-decoration: none; line-height: 1.15; }
+        .logo span { display: block; font-size: 10.5px; font-weight: 400; color: rgba(255,255,255,0.45); letter-spacing: 1.8px; text-transform: uppercase; }
+        .nav-links { display: flex; gap: 28px; align-items: center; }
+        .nav-links a { color: rgba(255,255,255,0.55); text-decoration: none; font-size: 13.5px; font-weight: 500; transition: all 0.22s; cursor: pointer; position: relative; }
+        .nav-links a:hover { color: #fff; }
+        .nav-links a::after { content: ''; position: absolute; bottom: -5px; left: 0; width: 0; height: 1.5px; background: #fff; transition: width 0.22s; }
+        .nav-links a:hover::after { width: 100%; }
+
+        /* Hero */
+        #hero {
+            position: relative; z-index: 1;
+            min-height: 100vh; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; text-align: center;
+            padding: 120px 24px 80px;
+        }
+        #hero h2 {
+            font-size: clamp(38px, 7vw, 76px); font-weight: 700;
+            line-height: 1.06; letter-spacing: -2px; margin-bottom: 20px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+        #hero h2 span {
+            background: linear-gradient(135deg, #818cf8, #a78bfa, #c084fc);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        #hero p { font-size: 17px; color: rgba(255,255,255,0.6); max-width: 520px; animation: fadeInUp 0.8s 0.18s both; }
+        .cta-buttons { display: flex; gap: 15px; margin-top: 44px; animation: fadeInUp 0.8s 0.36s both; flex-wrap: wrap; justify-content: center; }
+        .btn-primary {
+            padding: 15px 34px; font-size: 14px; font-weight: 600; border-radius: 9999px;
+            cursor: pointer; transition: all 0.25s; letter-spacing: 0.3px; min-width: 150px;
+            font-family: 'Inter', sans-serif; border: 1px solid transparent;
+        }
+        .btn-encrypt-hero { background: #fff; color: #000; }
+        .btn-encrypt-hero:hover { transform: scale(1.03); box-shadow: 0 0 35px rgba(129,140,248,0.45); }
+        .btn-decrypt-hero { background: #0f0f0f; color: #fff; border-color: rgba(255,255,255,0.15); }
+        .btn-decrypt-hero:hover { background: #1c1c1c; border-color: rgba(255,255,255,0.3); box-shadow: 0 0 35px rgba(167,139,250,0.4); transform: scale(1.03); }
+
+        /* Modals */
+        .modal-backdrop {
+            position: fixed; inset: 0; z-index: 200;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s; padding: 20px;
+        }
+        .modal-backdrop.active { opacity: 1; pointer-events: all; }
+        .modal {
+            background: var(--card-bg); border: 1px solid var(--glass-border);
+            border-radius: 22px; width: 100%; max-width: 520px;
+            transform: scale(0.94) translateY(12px);
+            transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden; box-shadow: 0 30px 70px rgba(0,0,0,0.6);
+            position: relative;
+        }
+        .modal-backdrop.active .modal { transform: scale(1) translateY(0); }
+        .modal::after {
+            content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1.5px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+            animation: scanLine 4s linear infinite;
+        }
+        @keyframes scanLine { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+        .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 22px 26px 0; }
+        .modal-tabs { display: flex; gap: 22px; }
+        .modal-tab {
+            font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.4); cursor: pointer;
+            padding-bottom: 10px; border-bottom: 2px solid transparent; transition: all 0.22s;
+            background: none; border-top: none; border-left: none; border-right: none;
+            font-family: 'Inter', sans-serif; letter-spacing: 0.2px;
+        }
+        .modal-tab.active { color: #fff; border-bottom-color: #fff; }
+        .modal-close {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+            color: #fff; font-size: 16px; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; transition: all 0.22s;
+        }
+        .modal-close:hover { background: rgba(255,255,255,0.14); transform: rotate(90deg); }
+
+        .modal-body { padding: 18px 26px 28px; }
+        .modal-form { display: none; flex-direction: column; }
+        .modal-form.active { display: flex; }
+
+        /* Drag & drop zone */
+        .drop-zone {
+            border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px;
+            padding: 24px; text-align: center; color: rgba(255,255,255,0.5);
+            transition: all 0.2s; margin-bottom: 18px; cursor: pointer;
+        }
+        .drop-zone.drag-over { border-color: var(--accent-primary); background: rgba(129,140,248,0.08); }
+        .drop-zone input[type="file"] { display: none; }
+        .drop-zone label { cursor: pointer; display: block; font-size: 14px; }
+
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; color: rgba(255,255,255,0.7); font-size: 12.5px; margin-bottom: 7px; font-weight: 500; letter-spacing: 0.3px; text-transform: uppercase; }
+        .form-group input[type="password"] {
+            width: 100%; background: var(--input-bg); border: 1px solid var(--input-border);
+            border-radius: 12px; padding: 13px 15px; color: #fff;
+            font-family: 'Roboto Mono', monospace; font-size: 14px; outline: none; transition: all 0.25s;
+        }
+        .form-group input:focus { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.07); box-shadow: 0 0 18px rgba(129,140,248,0.08); }
+
+        .password-strength { display: flex; gap: 4px; margin-top: 8px; }
+        .strength-bar { height: 3px; flex: 1; background: rgba(255,255,255,0.1); border-radius: 2px; transition: background 0.3s; }
+        .strength-bar.active.weak { background: #ef4444; }
+        .strength-bar.active.fair { background: #f59e0b; }
+        .strength-bar.active.good { background: #3b82f6; }
+        .strength-bar.active.strong { background: #22c55e; }
+        .strength-hint { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+        .password-warning { font-size: 11px; color: #f59e0b; margin-top: 4px; font-style: italic; }
+
+        .btn-row { display: flex; gap: 12px; align-items: center; }
+        .btn-submit {
+            flex: 1; padding: 15px; border-radius: 12px; border: none; font-weight: 600;
+            cursor: pointer; font-size: 14px; letter-spacing: 0.4px; transition: all 0.25s;
+            font-family: 'Inter', sans-serif; background: #fff; color: #000;
+        }
+        .btn-submit:hover:not(:disabled) { box-shadow: 0 0 30px rgba(129,140,248,0.6); transform: scale(1.02); }
+        .btn-submit:disabled { opacity: 0.35; cursor: not-allowed; }
+        .btn-clear {
+            padding: 15px 20px; background: transparent; border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.8); border-radius: 12px; font-weight: 500; cursor: pointer;
+            transition: all 0.2s; font-size: 13px;
+        }
+        .btn-clear:hover { background: rgba(255,255,255,0.08); }
+
+        .progress-wrapper { margin-top: 16px; display: none; }
+        .progress-wrapper.visible { display: block; }
+        .progress-container { width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+        .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #818cf8, #a78bfa); border-radius: 10px; transition: width 0.1s ease; }
+        .status-text { font-size: 12px; margin-top: 8px; text-align: center; color: rgba(255,255,255,0.55); }
+
+        .msg-inline { font-size: 13px; margin-top: 10px; display: none; text-align: center; font-weight: 500; }
+        .msg-inline.error-msg { color: var(--error); }
+        .msg-inline.success-msg { color: var(--success); }
+        .msg-inline.visible { display: block; }
+        .checkmark { display: inline-block; margin-right: 4px; animation: popIn 0.3s ease; }
+        @keyframes popIn { 0% { transform: scale(0); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        /* Info modals */
+        .info-modal-backdrop {
+            position: fixed; inset: 0; z-index: 250;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.28s; padding: 20px;
+        }
+        .info-modal-backdrop.active { opacity: 1; pointer-events: all; }
+        .info-modal {
+            background: var(--card-bg); border: 1px solid var(--glass-border);
+            border-radius: 20px; padding: 30px 28px; width: 100%; max-width: 440px;
+            transform: scale(0.94) translateY(12px); transition: transform 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 30px 70px rgba(0,0,0,0.6); position: relative;
+        }
+        .info-modal-backdrop.active .info-modal { transform: scale(1) translateY(0); }
+        .info-modal h3 { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+        .info-modal p { color: rgba(255,255,255,0.65); font-size: 14.5px; line-height: 1.7; margin-bottom: 12px; }
+        .info-modal-close {
+            position: absolute; top: 16px; right: 18px; width: 32px; height: 32px;
+            border-radius: 50%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+            color: #fff; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .project-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .project-list li a {
+            display: block; padding: 12px 16px; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff;
+            text-decoration: none; font-weight: 500; transition: all 0.2s;
+        }
+        .project-list li a:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.25); transform: translateX(4px); }
+
+        footer {
+            position: relative; z-index: 1; text-align: center; padding: 36px 24px;
+            border-top: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.4);
+            font-size: 13px; margin-top: auto;
+        }
+
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 768px) {
+            nav { padding: 14px 18px; } .nav-links { gap: 16px; }
+            .logo { font-size: 20px; } .logo span { font-size: 9px; }
+            #hero h2 { font-size: clamp(30px, 8vw, 48px); }
+            .btn-primary { width: 100%; max-width: 280px; }
+            .modal { max-width: 94vw; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particleCanvas"></canvas>
+    <div class="bg-3d-text" id="bg3dText">PRIVACY</div>
+
+    <nav>
+        <a href="#" class="logo">Vibex <span>privacy matter</span></a>
+        <div class="nav-links">
+            <a onclick="openRepositoryModal()">Repository</a>
+            <a onclick="openInfoModal('guide')">User Guide</a>
+            <a onclick="openInfoModal('privacy')">Privacy Policy</a>
+        </div>
+    </nav>
+
+    <section id="hero">
+        <h2>Ghost your<br><span>files</span></h2>
+        <p>All encryption happens locally in your browser. Your files never leave your device. Private, secure, and simple.</p>
+        <div class="cta-buttons">
+            <button class="btn-primary btn-encrypt-hero" onclick="openVaultModal('encrypt')">Encrypt</button>
+            <button class="btn-primary btn-decrypt-hero" onclick="openVaultModal('decrypt')">Decrypt</button>
+        </div>
+    </section>
+
+    <footer>
+         &copy; 2026 Vibex<span> security</span>
+    </footer>
+
+    <div class="modal-backdrop" id="vaultModalBackdrop">
+        <div class="modal" id="vaultModal">
+            <div class="modal-header">
+                <div class="modal-tabs">
+                    <button class="modal-tab active" id="tabEncrypt" onclick="switchTab('encrypt')">Encrypt</button>
+                    <button class="modal-tab" id="tabDecrypt" onclick="switchTab('decrypt')">Decrypt</button>
+                </div>
+                <button class="modal-close" onclick="closeVaultModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-form active" id="formEncrypt">
+                    <div class="drop-zone" id="encDropZone">
+                        <input type="file" id="enc-file">
+                        <label for="enc-file">📂 Drop file here or click to browse</label>
+                        <span style="font-size:12px;color:rgba(255,255,255,0.3);" id="encFileNameDisplay"></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Passphrase</label>
+                        <input type="password" id="enc-pass" placeholder="••••••••••••">
+                        <div class="password-strength" id="encStrengthMeter"></div>
+                        <div class="strength-hint" id="encStrengthHint"></div>
+                        <div class="password-warning">💡 Write it down or remember it well; if you forget, even we can't help you. Seriously.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm Passphrase</label>
+                        <input type="password" id="enc-pass-confirm" placeholder="••••••••••••">
+                    </div>
+                    <div class="btn-row">
+                        <button id="enc-btn" class="btn-submit" onclick="handleEncrypt()">Encrypt & Download</button>
+                        <button class="btn-clear" onclick="clearEncryptForm()">Clear</button>
+                    </div>
+                    <div id="enc-progress-wrap" class="progress-wrapper">
+                        <div class="progress-container"><div id="enc-bar" class="progress-bar"></div></div>
+                        <div id="enc-status" class="status-text"></div>
+                    </div>
+                    <div id="enc-error" class="msg-inline error-msg"></div>
+                    <div id="enc-success" class="msg-inline success-msg"></div>
+                </div>
+
+                <div class="modal-form" id="formDecrypt">
+                    <div class="drop-zone" id="decDropZone">
+                        <input type="file" id="dec-file" accept=".enc">
+                        <label for="dec-file">📂 Drop .enc file here or click to browse</label>
+                        <span style="font-size:12px;color:rgba(255,255,255,0.3);" id="decFileNameDisplay"></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Passphrase</label>
+                        <input type="password" id="dec-pass" placeholder="••••••••••••">
+                    </div>
+                    <div class="btn-row">
+                        <button id="dec-btn" class="btn-submit" onclick="handleDecrypt()">Decrypt & Download</button>
+                        <button class="btn-clear" onclick="clearDecryptForm()">Clear</button>
+                    </div>
+                    <div id="dec-progress-wrap" class="progress-wrapper">
+                        <div class="progress-container"><div id="dec-bar" class="progress-bar"></div></div>
+                        <div id="dec-status" class="status-text"></div>
+                    </div>
+                    <div id="dec-error" class="msg-inline error-msg"></div>
+                    <div id="dec-success" class="msg-inline success-msg"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-modal-backdrop" id="infoModalBackdrop">
+        <div class="info-modal"><button class="info-modal-close" onclick="closeInfoModal()">✕</button>
+            <h3 id="infoModalTitle"></h3><div id="infoModalContent"></div>
+        </div>
+    </div>
+    <div class="info-modal-backdrop" id="repoModalBackdrop">
+        <div class="info-modal"><button class="info-modal-close" onclick="closeRepositoryModal()">✕</button>
+            <h3>Repository</h3><p style="color:rgba(255,255,255,0.55);">Explore our security tools.</p>
+            <ul class="project-list">
+                <li><a href="#" target="_blank">🔍 Scan</a></li>
+                <li><a href="#" target="_blank">🕵️ Are you anonymous?</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // ─────────────────────────────────────
+        // Web Worker for heavy crypto
+        // ─────────────────────────────────────
+        const workerCode = `
+            const ITERATIONS = 100000;
+            const SALT_SIZE = 16;
+            const IV_SIZE = 12;
+
+            async function deriveKey(password, salt) {
+                const enc = new TextEncoder();
+                const baseKey = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+                return crypto.subtle.deriveKey(
+                    { name: "PBKDF2", salt, iterations: ITERATIONS, hash: "SHA-256" },
+                    baseKey, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
+                );
+            }
+
+            self.onmessage = async function(e) {
+                const { type, password, fileBuffer, salt, iv, originalName } = e.data;
+                try {
+                    if (type === 'encrypt') {
+                        const saltBytes = salt || crypto.getRandomValues(new Uint8Array(SALT_SIZE));
+                        const ivBytes = iv || crypto.getRandomValues(new Uint8Array(IV_SIZE));
+                        const key = await deriveKey(password, saltBytes);
+
+                        // Combine filename + file data
+                        const nameBytes = new TextEncoder().encode(originalName || '');
+                        const nameLength = new Uint32Array([nameBytes.byteLength]);
+                        const combined = new Uint8Array(4 + nameBytes.byteLength + fileBuffer.byteLength);
+                        combined.set(new Uint8Array(nameLength.buffer), 0);
+                        combined.set(nameBytes, 4);
+                        combined.set(new Uint8Array(fileBuffer), 4 + nameBytes.byteLength);
+
+                        self.postMessage({ status: 'progress', stage: 'Encrypting data...', progress: 60 });
+                        const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv: ivBytes }, key, combined);
+                        const result = new Uint8Array(saltBytes.byteLength + ivBytes.byteLength + ciphertext.byteLength);
+                        result.set(saltBytes, 0);
+                        result.set(ivBytes, saltBytes.byteLength);
+                        result.set(new Uint8Array(ciphertext), saltBytes.byteLength + ivBytes.byteLength);
+                        self.postMessage({ status: 'complete', buffer: result.buffer }, [result.buffer]);
+                    } else if (type === 'decrypt') {
+                        const saltBytes = new Uint8Array(fileBuffer.slice(0, SALT_SIZE));
+                        const ivBytes = new Uint8Array(fileBuffer.slice(SALT_SIZE, SALT_SIZE+IV_SIZE));
+                        const ciphertext = fileBuffer.slice(SALT_SIZE+IV_SIZE);
+                        const key = await deriveKey(password, saltBytes);
+                        self.postMessage({ status: 'progress', stage: 'Decrypting & verifying...', progress: 70 });
+                        const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: ivBytes }, key, ciphertext);
+                        const plainArr = new Uint8Array(plain);
+                        // extract filename
+                        const nameLen = new DataView(plainArr.buffer).getUint32(0, true);
+                        const nameBytes = plainArr.slice(4, 4+nameLen);
+                        const fileBytes = plainArr.slice(4+nameLen);
+                        const decoder = new TextDecoder();
+                        const originalName = decoder.decode(nameBytes);
+                        self.postMessage({
+                            status: 'complete',
+                            buffer: fileBytes.buffer,
+                            originalName: originalName
+                        }, [fileBytes.buffer]);
+                    }
+                } catch (err) {
+                    self.postMessage({ status: 'error', message: err.message });
+                }
+            };
+        `;
+
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(blob);
+        const cryptoWorker = new Worker(workerUrl);
+
+        // ─────────────────────────────────────
+        // UI Helpers
+        // ─────────────────────────────────────
+        const ITERATIONS = 100000;
+        const SALT_SIZE = 16;
+        const IV_SIZE = 12;
+
+        function showMsg(div, msg, type) {
+            div.innerHTML = type === 'success' ? `<span class="checkmark">✔</span> ${msg}` : msg;
+            div.className = `msg-inline ${type}-msg visible`;
+        }
+        function hideMsg(div) { div.classList.remove('visible'); }
+
+        function toggleProgress(wrap, btn, errDiv, succDiv, show) {
+            wrap.classList.toggle('visible', show);
+            if (show) {
+                const bar = wrap.querySelector('.progress-bar');
+                bar.style.width = '0%';
+                wrap.querySelector('.status-text').innerText = '';
+                btn.disabled = true;
+                hideMsg(errDiv); hideMsg(succDiv);
+            } else {
+                btn.disabled = false;
+            }
+        }
+
+        // Drag & drop setup
+        function setupDropZone(zoneId, fileInputId, displayId) {
+            const zone = document.getElementById(zoneId);
+            const input = document.getElementById(fileInputId);
+            const display = document.getElementById(displayId);
+
+            zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+            zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+                if (e.dataTransfer.files.length) {
+                    input.files = e.dataTransfer.files;
+                    display.innerText = e.dataTransfer.files[0].name;
+                }
+            });
+            input.addEventListener('change', () => {
+                if (input.files.length) display.innerText = input.files[0].name;
+                else display.innerText = '';
+            });
+            zone.addEventListener('click', () => input.click());
+        }
+        setupDropZone('encDropZone', 'enc-file', 'encFileNameDisplay');
+        setupDropZone('decDropZone', 'dec-file', 'decFileNameDisplay');
+
+        // Password strength meter
+        function evaluateStrength(pw) {
+            let score = 0;
+            if (pw.length >= 8) score++;
+            if (pw.length >= 12) score++;
+            if (/[A-Z]/.test(pw)) score++;
+            if (/[0-9]/.test(pw)) score++;
+            if (/[^A-Za-z0-9]/.test(pw)) score++;
+            if (score <= 1) return 'weak';
+            if (score === 2) return 'fair';
+            if (score === 3) return 'good';
+            return 'strong';
+        }
+        function updateStrengthMeter(inputId, meterId, hintId) {
+            const input = document.getElementById(inputId);
+            const meter = document.getElementById(meterId);
+            const hint = document.getElementById(hintId);
+            const strength = evaluateStrength(input.value);
+            meter.innerHTML = '';
+            for (let i=0; i<4; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'strength-bar';
+                if (i < (strength === 'weak'?1:strength==='fair'?2:strength==='good'?3:4)) bar.classList.add('active', strength);
+                meter.appendChild(bar);
+            }
+            hint.innerText = strength === 'weak' ? 'Weak – add length & symbols' :
+                             strength === 'fair' ? 'Fair – could be stronger' :
+                             strength === 'good' ? 'Good – decent protection' : 'Strong – excellent!';
+        }
+        document.getElementById('enc-pass').addEventListener('input', () => {
+            updateStrengthMeter('enc-pass', 'encStrengthMeter', 'encStrengthHint');
+        });
+
+        // Clear forms
+        function clearEncryptForm() {
+            document.getElementById('enc-file').value = '';
+            document.getElementById('encFileNameDisplay').innerText = '';
+            document.getElementById('enc-pass').value = '';
+            document.getElementById('enc-pass-confirm').value = '';
+            document.getElementById('encStrengthMeter').innerHTML = '';
+            document.getElementById('encStrengthHint').innerText = '';
+            hideMsg(document.getElementById('enc-error'));
+            hideMsg(document.getElementById('enc-success'));
+            document.getElementById('enc-progress-wrap').classList.remove('visible');
+            document.getElementById('enc-btn').disabled = false;
+        }
+        function clearDecryptForm() {
+            document.getElementById('dec-file').value = '';
+            document.getElementById('decFileNameDisplay').innerText = '';
+            document.getElementById('dec-pass').value = '';
+            hideMsg(document.getElementById('dec-error'));
+            hideMsg(document.getElementById('dec-success'));
+            document.getElementById('dec-progress-wrap').classList.remove('visible');
+            document.getElementById('dec-btn').disabled = false;
+        }
+
+        // Vault modal logic
+        let currentTab = 'encrypt';
+        function openVaultModal(tab) {
+            document.getElementById('vaultModalBackdrop').classList.add('active');
+            switchTab(tab);
+            document.body.style.overflow = 'hidden';
+        }
+        function closeVaultModal() {
+            document.getElementById('vaultModalBackdrop').classList.remove('active');
+            document.body.style.overflow = '';
+            clearEncryptForm(); clearDecryptForm();
+        }
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tabEncrypt').classList.toggle('active', tab==='encrypt');
+            document.getElementById('tabDecrypt').classList.toggle('active', tab==='decrypt');
+            document.getElementById('formEncrypt').classList.toggle('active', tab==='encrypt');
+            document.getElementById('formDecrypt').classList.toggle('active', tab==='decrypt');
+            if (tab==='encrypt') clearEncryptForm(); else clearDecryptForm();
+        }
+
+        document.getElementById('vaultModalBackdrop').addEventListener('click', e => { if (e.target === e.currentTarget) closeVaultModal(); });
+
+        // Encryption
+        async function handleEncrypt() {
+            const fileInput = document.getElementById('enc-file');
+            const pass = document.getElementById('enc-pass').value;
+            const passConfirm = document.getElementById('enc-pass-confirm').value;
+            const btn = document.getElementById('enc-btn');
+            const wrap = document.getElementById('enc-progress-wrap');
+            const bar = document.getElementById('enc-bar');
+            const status = document.getElementById('enc-status');
+            const errDiv = document.getElementById('enc-error');
+            const succDiv = document.getElementById('enc-success');
+
+            if (!fileInput.files[0]) { showMsg(errDiv, '⚠ Please select a file.', 'error'); return; }
+            if (!pass) { showMsg(errDiv, '⚠ Passphrase required.', 'error'); return; }
+            if (pass !== passConfirm) { showMsg(errDiv, '⚠ Passphrases do not match.', 'error'); return; }
+
+            toggleProgress(wrap, btn, errDiv, succDiv, true);
+            status.innerText = 'Reading file...'; bar.style.width = '10%';
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onprogress = e => { if (e.lengthComputable) { bar.style.width = Math.min(10 + (e.loaded/e.total)*20, 30)+'%'; } };
+            reader.onload = async () => {
+                const buffer = reader.result;
+                bar.style.width = '35%'; status.innerText = 'Deriving key (this may take a moment)...';
+                cryptoWorker.postMessage({
+                    type: 'encrypt',
+                    password: pass,
+                    fileBuffer: buffer,
+                    originalName: file.name
+                });
+            };
+            reader.readAsArrayBuffer(file);
+
+            cryptoWorker.onmessage = function(e) {
+                const { status: msgStatus, stage, progress, buffer } = e.data;
+                if (msgStatus === 'progress') {
+                    status.innerText = stage; bar.style.width = Math.min(35 + progress*0.5, 85)+'%';
+                } else if (msgStatus === 'complete') {
+                    bar.style.width = '95%'; status.innerText = 'Packaging file...';
+                    const blob = new Blob([buffer], { type: 'application/octet-stream' });
+                    downloadBlob(blob, file.name + '.enc');
+                    showMsg(succDiv, `File encrypted successfully.`, 'success');
+                    toggleProgress(wrap, btn, errDiv, succDiv, false);
+                    bar.style.width = '100%';
+                } else if (msgStatus === 'error') {
+                    showMsg(errDiv, '⚠ Encryption failed: ' + e.data.message, 'error');
+                    toggleProgress(wrap, btn, errDiv, succDiv, false);
+                }
+            };
+        }
+
+        // Decryption
+        async function handleDecrypt() {
+            const fileInput = document.getElementById('dec-file');
+            const pass = document.getElementById('dec-pass').value;
+            const btn = document.getElementById('dec-btn');
+            const wrap = document.getElementById('dec-progress-wrap');
+            const bar = document.getElementById('dec-bar');
+            const status = document.getElementById('dec-status');
+            const errDiv = document.getElementById('dec-error');
+            const succDiv = document.getElementById('dec-success');
+
+            if (!fileInput.files[0]) { showMsg(errDiv, '⚠ Please select a .enc file.', 'error'); return; }
+            if (!pass) { showMsg(errDiv, '⚠ Passphrase required.', 'error'); return; }
+
+            toggleProgress(wrap, btn, errDiv, succDiv, true);
+            status.innerText = 'Reading encrypted file...'; bar.style.width = '10%';
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onprogress = e => { if (e.lengthComputable) { bar.style.width = Math.min(10 + (e.loaded/e.total)*20, 30)+'%'; } };
+            reader.onload = async () => {
+                const buffer = reader.result;
+                bar.style.width = '35%'; status.innerText = 'Deriving key...';
+                cryptoWorker.postMessage({ type: 'decrypt', password: pass, fileBuffer: buffer });
+            };
+            reader.readAsArrayBuffer(file);
+
+            cryptoWorker.onmessage = function(e) {
+                const { status: msgStatus, stage, progress, buffer, originalName } = e.data;
+                if (msgStatus === 'progress') {
+                    status.innerText = stage; bar.style.width = Math.min(35 + progress*0.5, 85)+'%';
+                } else if (msgStatus === 'complete') {
+                    bar.style.width = '95%'; status.innerText = 'Preparing download...';
+                    const blob = new Blob([buffer]);
+                    downloadBlob(blob, originalName || 'decrypted_file');
+                    showMsg(succDiv, `Decryption successful. Original name: ${originalName}`, 'success');
+                    toggleProgress(wrap, btn, errDiv, succDiv, false);
+                    bar.style.width = '100%';
+                } else if (msgStatus === 'error') {
+                    showMsg(errDiv, '⚠ Decryption failed. Check password or file integrity.', 'error');
+                    toggleProgress(wrap, btn, errDiv, succDiv, false);
+                }
+            };
+        }
+
+        function downloadBlob(blob, name) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = name;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Info modals
+        const infoContent = {
+            guide: { title: 'User Guide', html: `<p>All encryption happens <strong>locally</strong>.</p><p>AES‑GCM 256‑bit + PBKDF2 (100k iterations).</p><p>Each file stores its original name securely.</p><p style="color:rgba(255,255,255,0.4);">No account, no tracking.</p>` },
+            privacy: { title: 'Privacy Policy', html: `<p>Your data never leaves your device.</p><p>No cookies, no analytics.</p><p>Privacy is a right.</p>` }
+        };
+        function openInfoModal(type) {
+            const d = infoContent[type]; if(!d) return;
+            document.getElementById('infoModalTitle').innerText = d.title;
+            document.getElementById('infoModalContent').innerHTML = d.html;
+            document.getElementById('infoModalBackdrop').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeInfoModal() {
+            document.getElementById('infoModalBackdrop').classList.remove('active');
+            if (!document.getElementById('vaultModalBackdrop').classList.contains('active')) document.body.style.overflow = '';
+        }
+        document.getElementById('infoModalBackdrop').addEventListener('click', e => { if(e.target === e.currentTarget) closeInfoModal(); });
+        function openRepositoryModal() { document.getElementById('repoModalBackdrop').classList.add('active'); document.body.style.overflow = 'hidden'; }
+        function closeRepositoryModal() { document.getElementById('repoModalBackdrop').classList.remove('active'); if (!document.getElementById('vaultModalBackdrop').classList.contains('active')) document.body.style.overflow = ''; }
+        document.getElementById('repoModalBackdrop').addEventListener('click', e => { if(e.target === e.currentTarget) closeRepositoryModal(); });
+
+        document.addEventListener('keydown', e => { if(e.key==='Escape') { closeVaultModal(); closeInfoModal(); closeRepositoryModal(); } });
+
+        // 3D background word
+        const bgText = document.getElementById('bg3dText');
+        let mx=window.innerWidth/2, my=window.innerHeight/2, crx=0, cry=0, ctz=0;
+        window.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; });
+        function animate3D() {
+            const cx=window.innerWidth/2, cy=window.innerHeight/2;
+            const dx=mx-cx, dy=my-cy;
+            const trx = (dy/cy)*-15, tryy = (dx/cx)*15;
+            const dist = Math.sqrt(dx*dx+dy*dy), maxDist = Math.sqrt(cx*cx+cy*cy);
+            const ttz = Math.max(-100, (1-dist/maxDist)*80);
+            crx += (trx-crx)*0.08; cry += (tryy-cry)*0.08; ctz += (ttz-ctz)*0.08;
+            bgText.style.transform = `translate(-50%,-50%) perspective(800px) rotateX(${crx}deg) rotateY(${cry}deg) translateZ(${ctz}px)`;
+            requestAnimationFrame(animate3D);
+        }
+        animate3D();
+
+        // Particle canvas
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        class Particle {
+            constructor(){ this.reset(); }
+            reset(){ this.x=Math.random()*canvas.width; this.y=Math.random()*canvas.height; this.size=Math.random()*1.5+0.5; this.speedX=(Math.random()-0.5)*0.3; this.speedY=(Math.random()-0.5)*0.3; }
+            update(mx,my){
+                this.x+=this.speedX; this.y+=this.speedY;
+                if(this.x<0||this.x>canvas.width||this.y<0||this.y>canvas.height) this.reset();
+                const dx=this.x-mx, dy=this.y-my, dist=Math.sqrt(dx*dx+dy*dy);
+                if(dist<120){ this.x+=dx*0.005; this.y+=dy*0.005; }
+            }
+            draw(){ ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.fill(); }
+        }
+        function resizeCanvas(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        for(let i=0;i<70;i++) particles.push(new Particle());
+        function animateParticles(){
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            particles.forEach(p=>{ p.update(mx,my); p.draw(); });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        window.addEventListener('scroll', () => {
+            const hero = document.getElementById('hero');
+            if(hero&&window.pageYOffset<window.innerHeight) hero.style.transform=`translateY(${window.pageYOffset*0.2}px)`;
+        });
+    </script>
+</body>
+</html>
