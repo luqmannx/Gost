@@ -1,0 +1,280 @@
+/* =====================================================================
+   modal.css — POPUP WINDOWS
+   ---------------------------------------------------------------------
+   Two modals exist:
+     1. Vault modal  (#vaultModalBackdrop) — the Encrypt/Decrypt form
+     2. Info modal   (#infoModalBackdrop)  — User Guide / Security / Privacy
+   They are always in the HTML but invisible (opacity 0). js/modal.js
+   adds the class "is-open" to show them.
+   ===================================================================== */
+
+/* ---------- Dark blurred layer behind a modal ---------- */
+.modal-backdrop,
+.info-backdrop {
+  position: fixed;
+  inset: 0;                         /* cover the whole screen */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--backdrop);
+  -webkit-backdrop-filter: saturate(120%) blur(18px);
+  backdrop-filter: saturate(120%) blur(18px);
+  opacity: 0;
+  pointer-events: none;             /* closed modal must not block clicks */
+  transition: opacity .3s var(--ease), background-color .35s var(--ease);
+}
+
+.modal-backdrop { z-index: 200; }
+.info-backdrop  { z-index: 250; }   /* info can open on top of the vault */
+
+.modal-backdrop.is-open,
+.info-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ---------- Vault modal box ---------- */
+.modal {
+  width: min(500px, 100%);
+  max-height: min(86vh, 760px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-xl);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: saturate(180%) blur(28px);
+  backdrop-filter: saturate(180%) blur(28px);
+  box-shadow: var(--glass-shadow), var(--glass-inset);
+  /* Starts slightly small + lower, animates to normal when opened */
+  transform: scale(.96) translateY(14px);
+  transition: transform .38s var(--ease), background-color .35s var(--ease),
+              border-color .35s var(--ease), box-shadow .35s var(--ease);
+}
+
+.modal-backdrop.is-open .modal {
+  transform: scale(1) translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 0;
+  flex-shrink: 0;
+}
+
+.modal-body {
+  padding: 20px 22px calc(24px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;     /* scrolling inside won't scroll the page */
+}
+
+/* ---------- Encrypt | Decrypt segmented switch ---------- */
+.segmented {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 210px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--seg-bg);
+  border: 1px solid var(--border);
+  transition: background-color .35s var(--ease), border-color .35s var(--ease);
+}
+
+/* The sliding "thumb" behind the active tab */
+.segmented-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  height: calc(100% - 6px);
+  border-radius: 999px;
+  background: var(--seg-thumb);
+  box-shadow: var(--seg-shadow);
+  transition: transform .34s var(--ease), background-color .35s var(--ease),
+              box-shadow .35s var(--ease);
+}
+
+/* js/main.js sets data-active="decrypt" -> slide the thumb right */
+.segmented[data-active="decrypt"] .segmented-thumb {
+  transform: translateX(100%);
+}
+
+.segmented-item {
+  position: relative;
+  z-index: 1;                       /* text sits above the thumb */
+  padding: 7px 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: var(--text-4);
+  border-radius: 999px;
+  transition: color .22s var(--ease);
+}
+
+.segmented-item.is-active {
+  color: var(--text);
+}
+
+/* The Encrypt pane and Decrypt pane — only one is shown at a time */
+.pane { display: none; }
+.pane.is-active { display: block; }
+
+/* ---------- Small round icon button (the X close button) ---------- */
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-3);
+  transition: background .2s var(--ease), color .2s var(--ease),
+              border-color .2s var(--ease), transform .2s var(--ease);
+}
+
+.icon-btn:hover {
+  background: var(--surface-hi);
+  border-color: var(--border-hi);
+  color: var(--text);
+  transform: scale(1.06);
+}
+
+/* ---------- Info modal (Guide / Security / Privacy) ---------- */
+.info-modal {
+  position: relative;
+  width: min(500px, 100%);
+  max-height: min(82vh, 700px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 28px 26px calc(28px + env(safe-area-inset-bottom));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-xl);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: saturate(180%) blur(28px);
+  backdrop-filter: saturate(180%) blur(28px);
+  box-shadow: var(--glass-shadow), var(--glass-inset);
+  transform: scale(.96) translateY(14px);
+  transition: transform .34s var(--ease), background-color .35s var(--ease),
+              border-color .35s var(--ease), box-shadow .35s var(--ease);
+}
+
+.info-backdrop.is-open .info-modal {
+  transform: scale(1) translateY(0);
+}
+
+.info-modal .icon-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.info-modal h3 {
+  margin-bottom: 16px;
+  padding-right: 44px;              /* don't run under the close button */
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -.03em;
+  color: var(--text);
+}
+
+.info-modal h4 {
+  margin: 18px 0 8px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.info-modal p {
+  margin-bottom: 12px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-3);
+}
+
+.info-modal p:last-child {
+  margin-bottom: 0;
+}
+
+.info-modal strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.info-modal ul {
+  margin: 0 0 14px 18px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-3);
+}
+
+.info-modal ul li {
+  margin-bottom: 6px;
+}
+
+/* Boxed note ("Memory note", "Audit status") */
+.security-note {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-3);
+}
+
+.security-note strong {
+  color: var(--text);
+}
+
+/* ---------- "Run crypto self-test" block in the Security page ---------- */
+.self-test {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.self-test button {
+  width: 100%;
+  height: 42px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background .22s var(--ease), color .22s var(--ease),
+              border-color .22s var(--ease), transform .18s var(--ease);
+}
+
+.self-test button:hover:not(:disabled) {
+  background: var(--surface-hi);
+  border-color: var(--border-hi);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.self-test button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.self-test-result {
+  min-height: 18px;
+  margin-top: 9px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-4);
+}
+
+.self-test-result.ok  { color: var(--ok); }
+.self-test-result.err { color: var(--err); }

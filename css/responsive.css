@@ -1,0 +1,60 @@
+/* =====================================================================
+   responsive.css — PHONE / SMALL SCREEN ADJUSTMENTS
+   ---------------------------------------------------------------------
+   Loaded LAST in index.html on purpose: when two CSS rules have the
+   same specificity, the one that comes later wins. So these overrides
+   beat the desktop styles in the other files.
+   ===================================================================== */
+
+/* Tablets and phones */
+@media (max-width: 720px) {
+  :root { --nav-h: 52px; }
+
+  .nav-right { gap: 14px; }
+  .nav-links { gap: 14px; }
+  .nav-links button { font-size: 12px; }
+  .logo { font-size: 16px; }
+  .logo small { font-size: 8.5px; letter-spacing: .12em; }
+
+  #hero { padding: calc(var(--nav-h) + 6vh) 20px 7vh; }
+  .hero-sub { margin-top: 18px; }
+
+  /* Stack the two big buttons vertically */
+  .cta {
+    flex-direction: column;
+    width: 100%;
+    max-width: 330px;
+    margin-top: 32px;
+    gap: 10px;
+  }
+
+  .btn {
+    width: 100%;
+    height: 52px;
+    font-size: 17px;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: 92vh;
+    max-height: 92svh;
+    border-radius: 22px;
+  }
+
+  .modal-header { padding: 14px 14px 0; }
+  .segmented { width: 100%; max-width: 220px; }
+  .modal-body { padding: 18px 18px calc(22px + env(safe-area-inset-bottom)); }
+
+  /* 16px+ font stops iOS Safari from zooming in when you tap an input */
+  .input-wrap input { font-size: 16px; }
+
+  .info-modal { padding: 26px 20px calc(26px + env(safe-area-inset-bottom)); }
+}
+
+/* Very small phones */
+@media (max-width: 400px) {
+  .nav-links { gap: 11px; }
+  .nav-links button { font-size: 11.5px; }
+  .logo small { display: none; }
+  .nav-links button:nth-child(1) { display: none; }   /* hide "User Guide" link */
+}

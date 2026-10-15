@@ -1,0 +1,177 @@
+/* =====================================================================
+   variables.css — DESIGN TOKENS (colors, fonts, sizes)
+   ---------------------------------------------------------------------
+   Every color in the app is a CSS "custom property" (a variable).
+   Other CSS files never hard-code colors; they use var(--name).
+
+   How theming works:
+     <html data-theme="dark">  -> uses the :root values below
+     <html data-theme="light"> -> the html[data-theme="light"] block
+                                  overrides the same variable names
+   js/theme.js flips that attribute, and the whole page re-colors
+   automatically because everything reads from these variables.
+   ===================================================================== */
+
+:root {
+  /* ---------- Fonts ---------- */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+               "Helvetica Neue", Inter, "Segoe UI", Roboto, sans-serif;
+  --font-display: "SF Pro Display", -apple-system, BlinkMacSystemFont,
+                  "Segoe UI Variable Display", "Segoe UI", Roboto, "Helvetica Neue",
+                  Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* ---------- Corner radius scale ---------- */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 980px;          /* huge radius = fully rounded "pill" shape */
+
+  /* ---------- Motion ---------- */
+  --ease: cubic-bezier(.22, 1, .36, 1);   /* smooth "ease-out" curve */
+  --dur: .32s;
+
+  /* ---------- Layout ---------- */
+  --nav-h: 56px;            /* height of the top navigation bar */
+
+  /* ---------- DARK THEME colors (default) ---------- */
+  --bg: #000;
+  --text: #f5f5f7;
+  --text-2: rgba(245, 245, 247, .72);     /* secondary text */
+  --text-3: rgba(245, 245, 247, .48);     /* tertiary text  */
+  --text-4: rgba(245, 245, 247, .30);     /* faint text     */
+
+  --surface: rgba(255, 255, 255, .05);
+  --surface-hi: rgba(255, 255, 255, .09); /* surface on hover */
+  --border: rgba(255, 255, 255, .10);
+  --border-hi: rgba(255, 255, 255, .20);
+
+  --nav-bg: rgba(8, 9, 12, .72);
+  --nav-line: rgba(255, 255, 255, .07);
+  --nav-hover: #fff;
+
+  /* "Glass" look used by the modals */
+  --glass-bg: rgba(20, 21, 26, .82);
+  --glass-border: rgba(255, 255, 255, .12);
+  --glass-shadow: 0 32px 90px rgba(0, 0, 0, .6);
+  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, .06);
+  --backdrop: rgba(0, 0, 0, .55);
+
+  /* Form inputs */
+  --input-bg: rgba(255, 255, 255, .04);
+  --input-bg-focus: rgba(255, 255, 255, .065);
+  --input-text: #fff;
+  --input-placeholder: rgba(255, 255, 255, .22);
+
+  /* File drop zone */
+  --drop-border: rgba(255, 255, 255, .16);
+  --drop-bg: rgba(255, 255, 255, .03);
+  --drop-bg-hover: rgba(255, 255, 255, .06);
+  --drop-bg-over: rgba(255, 255, 255, .09);
+
+  --chip-bg: rgba(255, 255, 255, .08);
+
+  /* Encrypt/Decrypt segmented tab switch */
+  --seg-bg: rgba(255, 255, 255, .06);
+  --seg-thumb: rgba(255, 255, 255, .14);
+  --seg-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+
+  /* Progress bar + password strength meter */
+  --track-bg: rgba(255, 255, 255, .09);
+  --bar-from: rgba(255, 255, 255, .55);
+  --bar-to: #fff;
+  --strength-bg: rgba(255, 255, 255, .10);
+
+  /* Gradient on the word "files" in the hero title */
+  --hero-em-from: #fff;
+  --hero-em-to: #a9adbd;
+
+  /* Primary (solid) button */
+  --btn-primary-bg: #fff;
+  --btn-primary-fg: #000;
+  --btn-primary-border: #fff;
+  --btn-primary-bg-hover: #f2f2f7;
+  --btn-primary-border-hover: #f2f2f7;
+  --btn-shadow: rgba(255, 255, 255, .10);
+  --btn-shadow-hover: rgba(255, 255, 255, .16);
+
+  /* Soft glows painted on the page background */
+  --body-glow-1: rgba(110, 132, 255, .10);
+  --body-glow-2: rgba(255, 255, 255, .03);
+  --body-base: #000;
+
+  /* Background dots (read by css/background-dots.css) */
+  --dot-color: rgba(255, 255, 255, .6);
+
+  /* Status colors */
+  --ok: #30d158;
+  --warn: #ffd60a;
+  --err: #ff453a;
+}
+
+/* ---------- LIGHT THEME overrides ---------- */
+html[data-theme="light"] {
+  --bg: #fbfbfd;
+  --text: #1d1d1f;
+  --text-2: rgba(29, 29, 31, .72);
+  --text-3: rgba(29, 29, 31, .55);
+  --text-4: rgba(29, 29, 31, .36);
+
+  --surface: rgba(0, 0, 0, .04);
+  --surface-hi: rgba(0, 0, 0, .08);
+  --border: rgba(0, 0, 0, .10);
+  --border-hi: rgba(0, 0, 0, .20);
+
+  --nav-bg: rgba(251, 251, 253, .78);
+  --nav-line: rgba(0, 0, 0, .06);
+  --nav-hover: #1d1d1f;
+
+  --glass-bg: rgba(255, 255, 255, .88);
+  --glass-border: rgba(0, 0, 0, .08);
+  --glass-shadow: 0 32px 90px rgba(0, 0, 0, .16);
+  --glass-inset: inset 0 1px 0 rgba(255, 255, 255, .9);
+  --backdrop: rgba(20, 20, 24, .28);
+
+  --input-bg: rgba(0, 0, 0, .035);
+  --input-bg-focus: rgba(0, 0, 0, .05);
+  --input-text: #1d1d1f;
+  --input-placeholder: rgba(29, 29, 31, .28);
+
+  --drop-border: rgba(0, 0, 0, .14);
+  --drop-bg: rgba(0, 0, 0, .025);
+  --drop-bg-hover: rgba(0, 0, 0, .045);
+  --drop-bg-over: rgba(0, 0, 0, .07);
+
+  --chip-bg: rgba(0, 0, 0, .06);
+
+  --seg-bg: rgba(0, 0, 0, .05);
+  --seg-thumb: #fff;
+  --seg-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 0 0 .5px rgba(0, 0, 0, .04);
+
+  --track-bg: rgba(0, 0, 0, .08);
+  --bar-from: rgba(0, 0, 0, .40);
+  --bar-to: #1d1d1f;
+  --strength-bg: rgba(0, 0, 0, .08);
+
+  --hero-em-from: #1d1d1f;
+  --hero-em-to: #6e6e73;
+
+  --btn-primary-bg: #1d1d1f;
+  --btn-primary-fg: #fff;
+  --btn-primary-border: #1d1d1f;
+  --btn-primary-bg-hover: #2d2d2f;
+  --btn-primary-border-hover: #2d2d2f;
+  --btn-shadow: rgba(0, 0, 0, .08);
+  --btn-shadow-hover: rgba(0, 0, 0, .14);
+
+  --body-glow-1: rgba(110, 132, 255, .12);
+  --body-glow-2: rgba(0, 0, 0, .02);
+  --body-base: #fbfbfd;
+
+  --dot-color: rgba(0, 0, 0, .55);
+
+  --ok: #248a3d;
+  --warn: #b25e00;
+  --err: #d70015;
+}

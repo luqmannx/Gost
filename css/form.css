@@ -1,0 +1,360 @@
+/* =====================================================================
+   form.css — EVERYTHING INSIDE THE ENCRYPT / DECRYPT FORM
+   ---------------------------------------------------------------------
+   Drop zone · passphrase inputs · strength meter · action buttons ·
+   progress bar · success/error messages · HTTPS warning banner
+   ===================================================================== */
+
+/* ---------- File drop zone ---------- */
+.drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 26px 18px;
+  margin-bottom: 20px;
+  border: 1px dashed var(--drop-border);
+  border-radius: var(--r-md);
+  background: var(--drop-bg);
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .24s var(--ease), border-color .24s var(--ease),
+              transform .24s var(--ease);
+}
+
+.drop:hover {
+  background: var(--drop-bg-hover);
+  border-color: var(--border-hi);
+}
+
+/* js/drop-zone.js adds "is-over" while a file is dragged over it */
+.drop.is-over {
+  background: var(--drop-bg-over);
+  border-color: var(--border-hi);
+  border-style: solid;
+  transform: scale(1.01);
+}
+
+/* The real <input type="file"> is hidden; the whole box acts as the button */
+.drop input {
+  display: none;
+}
+
+.drop svg {
+  margin-bottom: 10px;
+  color: var(--text-4);
+  transition: color .24s var(--ease);
+}
+
+.drop:hover svg {
+  color: var(--text-2);
+}
+
+.drop-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: var(--text-2);
+}
+
+.drop-sub {
+  font-size: 12px;
+  color: var(--text-4);
+}
+
+/* Chip that shows "filename.pdf · 2.4 MB" after choosing a file */
+.drop-file {
+  display: none;
+  max-width: 100%;
+  margin-top: 10px;
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+  background: var(--chip-bg);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;          /* long names end with "…" */
+  white-space: nowrap;
+}
+
+.drop-file.is-set {
+  display: block;
+}
+
+/* ---------- Label + input group ---------- */
+.field {
+  margin-bottom: 18px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+
+.input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrap input {
+  width: 100%;
+  height: 46px;
+  padding: 0 92px 0 22px;           /* right padding leaves room for the icons */
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--input-text);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  letter-spacing: .02em;
+  outline: none;
+  transition: border-color .24s var(--ease), background .24s var(--ease),
+              box-shadow .24s var(--ease), color .35s var(--ease);
+}
+
+.input-wrap input::placeholder {
+  color: var(--input-placeholder);
+  letter-spacing: .1em;
+}
+
+.input-wrap input:focus {
+  border-color: var(--border-hi);
+  background: var(--input-bg-focus);
+  box-shadow: 0 0 0 3.5px var(--surface);
+}
+
+/* Icons inside the input (dice = generate, eye = show/hide) */
+.input-actions {
+  position: absolute;
+  right: 7px;
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.reveal,
+.dice {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--text-4);
+  transition: color .2s var(--ease), background .2s var(--ease);
+}
+
+.reveal:hover,
+.dice:hover {
+  color: var(--text-2);
+  background: var(--surface);
+}
+
+.reveal.is-revealed {
+  color: var(--text);
+}
+
+.dice:active {
+  transform: scale(.9);
+}
+
+/* ---------- Password strength meter (4 little bars) ---------- */
+.strength {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 0 8px;
+}
+
+.strength i {
+  height: 3px;
+  flex: 1;
+  border-radius: 999px;
+  background: var(--strength-bg);
+  transition: background .35s var(--ease);
+}
+
+/* js/password-strength.js sets data-level 0..4.
+   :nth-child(-n+2) means "the first 2 bars". */
+.strength[data-level="1"] i:nth-child(-n+1) { background: #ff453a; }  /* red    */
+.strength[data-level="2"] i:nth-child(-n+2) { background: #ff9f0a; }  /* orange */
+.strength[data-level="3"] i:nth-child(-n+3) { background: #0a84ff; }  /* blue   */
+.strength[data-level="4"] i                 { background: #30d158; }  /* green  */
+
+.hint {
+  margin-top: 8px;
+  padding: 0 8px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-4);
+}
+
+.hint.warn {
+  color: var(--text-3);
+}
+
+/* ---------- Action buttons (Encrypt & download / Clear) ---------- */
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.btn-run {
+  flex: 1;
+  height: 46px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--btn-primary-border);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -.012em;
+  transition: background .22s var(--ease), color .35s var(--ease),
+              border-color .35s var(--ease), transform .18s var(--ease),
+              opacity .22s var(--ease), box-shadow .22s var(--ease);
+}
+
+.btn-run:hover:not(:disabled) {
+  background: var(--btn-primary-bg-hover);
+  border-color: var(--btn-primary-border-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px var(--btn-shadow-hover);
+}
+
+.btn-run:active:not(:disabled) {
+  transform: scale(.98);
+}
+
+.btn-run:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.btn-reset {
+  height: 46px;
+  padding: 0 22px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-3);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background .22s var(--ease), color .22s var(--ease),
+              border-color .22s var(--ease);
+}
+
+.btn-reset:hover {
+  background: var(--surface-hi);
+  border-color: var(--border-hi);
+  color: var(--text);
+}
+
+/* ---------- Progress bar ---------- */
+.progress {
+  display: none;
+  margin-top: 18px;
+}
+
+.progress.is-on {
+  display: block;
+}
+
+.track {
+  height: 3px;
+  border-radius: var(--r-pill);
+  background: var(--track-bg);
+  overflow: hidden;
+  transition: background-color .35s var(--ease);
+}
+
+/* The filled part. JavaScript changes its width from 0% to 100%. */
+.track i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--bar-from), var(--bar-to));
+  transition: width .18s linear;
+}
+
+.progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 9px;
+}
+
+.status {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  color: var(--text-4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cancel-btn {
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-3);
+  transition: color .2s var(--ease), border-color .2s var(--ease),
+              background .2s var(--ease);
+}
+
+.cancel-btn:hover {
+  color: var(--err);
+  border-color: var(--err);
+  background: rgba(255, 69, 58, .08);
+}
+
+/* ---------- Success / error messages ---------- */
+.msg {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.msg.is-on { display: flex; }
+.msg.err   { color: var(--err); }
+.msg.ok    { color: var(--ok); }
+
+.msg svg {
+  flex-shrink: 0;
+}
+
+/* ---------- Red banner shown when the page is NOT on HTTPS ---------- */
+.secure-warning {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 300;
+  max-width: 90vw;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(255, 69, 58, .14);
+  border: 1px solid rgba(255, 69, 58, .3);
+  color: var(--err);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}

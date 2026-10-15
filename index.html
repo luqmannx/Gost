@@ -1,1 +1,297 @@
+<!DOCTYPE html>
+<!--
+  =====================================================================
+  index.html — PAGE STRUCTURE ONLY
+  ---------------------------------------------------------------------
+  No CSS or JavaScript lives in this file anymore:
+    css/  -> all styling       (linked in <head>)
+    js/   -> all logic         (linked at the bottom of <body>)
 
+  PROJECT MAP
+    css/variables.css         colors for dark + light theme, fonts, sizes
+    css/base.css              reset, body, focus outline, animations
+    css/nav.css               top bar + theme toggle
+    css/hero.css              big title, main buttons, footer
+    css/modal.css             popups, Encrypt/Decrypt tab switch
+    css/form.css              drop zone, inputs, strength meter, progress, messages
+    css/background-dots.css   position + color of the animated dots
+    css/responsive.css        phone layout (must stay LAST)
+
+    js/theme-init.js          picks light/dark before first paint (in <head>)
+    js/utils.js               small shared helpers
+    js/app-state.js           "busy" flag, Cancel
+    js/crypto/format.js       .enc file layout + constants
+    js/crypto/key-derivation.js  passphrase -> key (PBKDF2)
+    js/crypto/encryption.js   ENCRYPT logic (AES-256-GCM)
+    js/crypto/decryption.js   DECRYPT logic
+    js/crypto/self-test.js    "Run crypto self-test"
+    js/crypto/worker.js       background thread that runs the crypto
+    js/crypto-client.js       talks to the worker (or runs crypto on the page)
+    js/file-io.js             read chosen file, download result
+    js/theme.js               sun/moon toggle
+    js/password-generator.js  dice button
+    js/password-strength.js   4-bar strength meter
+    js/drop-zone.js           choose/drop file boxes
+    js/modal.js               open/close popups, keyboard support
+    js/info-pages.js          Guide / Security / Privacy text
+    js/encrypt-ui.js          Encrypt tab behaviour
+    js/decrypt-ui.js          Decrypt tab behaviour
+    js/background-dots.js     dots animation
+    js/main.js                starts everything, connects buttons (must stay LAST)
+  =====================================================================
+-->
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark light">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="index, follow, noarchive">
+<meta name="description" content="Privacy-focused client-side file encryption using AES-256-GCM and PBKDF2-HMAC-SHA256. Files are processed locally in your browser.">
+
+<!--
+  CONTENT SECURITY POLICY (CSP) — tells the browser what this page may load.
+    script-src 'self'  only our own .js files. Inline <script> and injected
+                       scripts are BLOCKED, which shuts down most XSS attacks.
+    style-src 'self'   only our own .css files.
+    worker-src 'self'  only our own worker file.
+    connect-src 'none' scripts may not make ANY network request,
+                       so data can't be sent anywhere.
+    default-src 'none' everything not listed above is blocked.
+  Moving all code into separate files is what makes this strict policy
+  possible (the old single file needed "nonce" values to allow inline code).
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; script-src 'self'; style-src 'self'; worker-src 'self'; connect-src 'none'; img-src 'self' data:; font-src 'self'; object-src 'none'; media-src 'none'; manifest-src 'none'; child-src 'none'">
+
+<title>Vibex — Client-Side File Encryption</title>
+
+<!-- Runs immediately (before the page is drawn) to avoid a theme "flash" -->
+<script src="js/theme-init.js"></script>
+
+<!-- ===================== STYLE (order matters) ===================== -->
+<link rel="stylesheet" href="css/variables.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/background-dots.css">
+<link rel="stylesheet" href="css/nav.css">
+<link rel="stylesheet" href="css/hero.css">
+<link rel="stylesheet" href="css/modal.css">
+<link rel="stylesheet" href="css/form.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+
+<body>
+
+<!-- Animated dots background (js/background-dots.js draws on it) -->
+<canvas id="particleCanvas" aria-hidden="true"></canvas>
+
+<!-- ========================= NAVIGATION ========================= -->
+<nav>
+  <a href="#" class="logo" aria-label="Vibex home">Vibex<small>Privacy matters</small></a>
+  <div class="nav-right">
+    <div class="nav-links">
+      <button id="navGuideBtn" type="button">User Guide</button>
+      <button id="navSecurityBtn" type="button">Security</button>
+      <button id="navPrivacyBtn" type="button">Privacy</button>
+    </div>
+    <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle appearance">
+      <svg class="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+      <svg class="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/>
+      </svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ============================ HERO ============================ -->
+<main id="hero">
+  <h1 class="hero-title">Ghost your <em>files</em></h1>
+  <p class="hero-sub">
+    Lock your stuff down with a secret passphrase.
+    The same magic word unlocks your digital skeleton closet on any device,
+    anywhere. because your secrets should travel with you.
+  </p>
+  <div class="cta">
+    <button id="ctaEncrypt" class="btn btn-primary" type="button">Encrypt a file</button>
+    <button id="ctaDecrypt" class="btn btn-ghost" type="button">Decrypt a file</button>
+  </div>
+</main>
+
+<footer>© 2026 Vibex — Client-Side File Encryption · Portfolio security project</footer>
+
+<!-- ================= VAULT MODAL (Encrypt / Decrypt) ================= -->
+<div class="modal-backdrop" id="vaultModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="vaultModalTitle">
+  <div class="modal" id="vaultModal">
+    <div class="modal-header">
+      <h2 id="vaultModalTitle" class="sr-only">File vault</h2>
+      <div class="segmented" id="modalTabs" data-active="encrypt">
+        <span class="segmented-thumb" aria-hidden="true"></span>
+        <button class="segmented-item is-active" id="tabEncrypt" type="button">Encrypt</button>
+        <button class="segmented-item" id="tabDecrypt" type="button">Decrypt</button>
+      </div>
+      <button class="icon-btn" id="vaultClose" type="button" aria-label="Close">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M1.5 1.5l11 11M12.5 1.5l-11 11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- ---------- ENCRYPT PANE (js/encrypt-ui.js) ---------- -->
+      <div class="pane is-active" id="paneEncrypt">
+        <div class="drop" id="encDropZone" role="button" tabindex="0" aria-label="Choose a file to encrypt">
+          <input type="file" id="enc-file">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/>
+            <path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/>
+          </svg>
+          <span class="drop-title">Choose a file</span>
+          <span class="drop-sub">or drop it here · max 256 MB</span>
+          <span class="drop-file" id="encFileNameDisplay"></span>
+        </div>
+
+        <div class="field">
+          <label for="enc-pass">Passphrase</label>
+          <div class="input-wrap">
+            <input type="password" id="enc-pass" placeholder="••••••••••••" autocomplete="new-password" spellcheck="false" autocapitalize="off" maxlength="256">
+            <div class="input-actions">
+              <button type="button" class="dice" id="encDice" aria-label="Generate strong passphrase" title="Generate strong passphrase">
+                <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 7l6-3 6 3-6 3-6-3z"/>
+                  <path d="M3 7v6l6 3 6-3V7"/>
+                  <path d="M9 10v6"/>
+                </svg>
+              </button>
+              <button type="button" class="reveal" id="encReveal" aria-label="Show passphrase">
+                <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M1.5 10S4.8 4.5 10 4.5 18.5 10 18.5 10 15.2 15.5 10 15.5 1.5 10 1.5 10z"/>
+                  <circle cx="10" cy="10" r="2.6"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="strength" id="encStrength" data-level="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <div class="hint" id="encStrengthHint"></div>
+        </div>
+
+        <div class="field">
+          <label for="enc-pass-confirm">Confirm passphrase</label>
+          <div class="input-wrap">
+            <input type="password" id="enc-pass-confirm" placeholder="••••••••••••" autocomplete="new-password" spellcheck="false" autocapitalize="off" maxlength="256">
+          </div>
+          <p class="hint warn">Remember it well — the same passphrase unlocks this file on any device.</p>
+        </div>
+
+        <div class="actions">
+          <button id="enc-btn" class="btn-run" type="button">Encrypt &amp; download</button>
+          <button id="encClear" class="btn-reset" type="button">Clear</button>
+        </div>
+
+        <div class="progress" id="enc-progress-wrap">
+          <div class="track"><i id="enc-bar"></i></div>
+          <div class="progress-row">
+            <span class="status" id="enc-status" aria-live="polite"></span>
+            <button class="cancel-btn" id="enc-cancel" type="button">Cancel</button>
+          </div>
+        </div>
+        <div class="msg err" id="enc-error" role="alert"></div>
+        <div class="msg ok" id="enc-success" role="status"></div>
+      </div>
+
+      <!-- ---------- DECRYPT PANE (js/decrypt-ui.js) ---------- -->
+      <div class="pane" id="paneDecrypt">
+        <div class="drop" id="decDropZone" role="button" tabindex="0" aria-label="Choose an encrypted file">
+          <input type="file" id="dec-file" accept=".enc,application/octet-stream">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="4.5" y="10.5" width="15" height="9.5" rx="2.2"/>
+            <path d="M8 10.5V7.6a4 4 0 118 0v2.9"/>
+          </svg>
+          <span class="drop-title">Choose a .enc file</span>
+          <span class="drop-sub">or drop it here · max 256 MB</span>
+          <span class="drop-file" id="decFileNameDisplay"></span>
+        </div>
+
+        <div class="field">
+          <label for="dec-pass">Passphrase</label>
+          <div class="input-wrap">
+            <input type="password" id="dec-pass" placeholder="••••••••••••" autocomplete="current-password" spellcheck="false" autocapitalize="off" maxlength="256">
+            <div class="input-actions">
+              <button type="button" class="reveal" id="decReveal" aria-label="Show passphrase">
+                <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M1.5 10S4.8 4.5 10 4.5 18.5 10 18.5 10 15.2 15.5 10 15.5 1.5 10 1.5 10z"/>
+                  <circle cx="10" cy="10" r="2.6"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="dec-btn" class="btn-run" type="button">Decrypt &amp; download</button>
+          <button id="decClear" class="btn-reset" type="button">Clear</button>
+        </div>
+
+        <div class="progress" id="dec-progress-wrap">
+          <div class="track"><i id="dec-bar"></i></div>
+          <div class="progress-row">
+            <span class="status" id="dec-status" aria-live="polite"></span>
+            <button class="cancel-btn" id="dec-cancel" type="button">Cancel</button>
+          </div>
+        </div>
+        <div class="msg err" id="dec-error" role="alert"></div>
+        <div class="msg ok" id="dec-success" role="status"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ INFO MODAL (content filled by js/info-pages.js) ============ -->
+<div class="info-backdrop" id="infoModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="infoModalTitle">
+  <div class="info-modal">
+    <button class="icon-btn" id="infoClose" type="button" aria-label="Close">
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path d="M1.5 1.5l11 11M12.5 1.5l-11 11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <h3 id="infoModalTitle"></h3>
+    <div id="infoModalContent"></div>
+  </div>
+</div>
+
+<!-- ===================== LOGIC (order matters!) =====================
+     Scripts at the END of <body> run after all the HTML above exists.
+     Each file attaches itself to the global "Vibex" object; files lower
+     in the list can use the ones above them.                          -->
+
+<!-- 1. Shared helpers + state -->
+<script src="js/utils.js"></script>
+<script src="js/app-state.js"></script>
+
+<!-- 2. Cryptography (also loaded by js/crypto/worker.js) -->
+<script src="js/crypto/format.js"></script>
+<script src="js/crypto/key-derivation.js"></script>
+<script src="js/crypto/encryption.js"></script>
+<script src="js/crypto/decryption.js"></script>
+<script src="js/crypto/self-test.js"></script>
+<script src="js/crypto-client.js"></script>
+
+<!-- 3. Features -->
+<script src="js/file-io.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/password-generator.js"></script>
+<script src="js/password-strength.js"></script>
+<script src="js/drop-zone.js"></script>
+<script src="js/modal.js"></script>
+<script src="js/info-pages.js"></script>
+<script src="js/encrypt-ui.js"></script>
+<script src="js/decrypt-ui.js"></script>
+<script src="js/background-dots.js"></script>
+
+<!-- 4. Start the app (must be last) -->
+<script src="js/main.js"></script>
+</body>
+</html>

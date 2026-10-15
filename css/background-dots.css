@@ -1,0 +1,40 @@
+/* =====================================================================
+   background-dots.css — STYLE OF THE ANIMATED DOTS BACKGROUND
+   ---------------------------------------------------------------------
+   The dots are drawn by JavaScript (js/background-dots.js) onto a
+   <canvas>. This file POSITIONS the canvas and holds every VISUAL
+   setting, so you can restyle the dots without touching any JS.
+
+   js/background-dots.js reads these values with getComputedStyle()
+   and reads them again whenever the theme changes.
+
+   KNOBS YOU CAN TUNE
+     color                  dot color (comes from --dot-color in variables.css)
+     --dot-line-opacity     how visible the connecting lines are (0 - 1)
+     --dot-link-distance    how close two dots must be to get a line (px)
+   ===================================================================== */
+
+#particleCanvas {
+  position: fixed;                  /* stays still while the page scrolls */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2;                       /* above the body background, below the hero (z-index 10) */
+  pointer-events: none;             /* clicks pass straight through the canvas */
+  background: transparent;
+  display: block !important;
+
+  color: var(--dot-color);
+
+  /* Original values were .06 opacity and 120px.
+     Both are +10%: lines are 10% stronger and reach 10% further. */
+  --dot-line-opacity: .066;         /* .06  x 1.1 */
+  --dot-link-distance: 132px;       /* 120  x 1.1 */
+}
+
+/* Black lines on a white page look stronger than white lines on black,
+   so light mode uses 80% of the dark-mode opacity (as in the original). */
+html[data-theme="light"] #particleCanvas {
+  --dot-line-opacity: .0528;        /* .066 x 0.8 */
+}
